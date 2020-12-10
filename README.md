@@ -1,5 +1,6 @@
 # speedangle-to-racechrono
-Speedangle sa to racechrono vbo parser
+Speedangle .sa to racechrono .vbo parser
+
 ```
 $ python3 speedangle_2_racechrono.py -h
 usage: speedangle_2_racechrono.py [-h] [-o OUTPUT_FILE] sa_log_file
