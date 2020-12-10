@@ -33,5 +33,6 @@ optional arguments:
 
 ## Screenshots 
 
-![Analysis screen - Barber] (barber_analysis.jpeg)
-![Corner speeds - Grattan] (grattan_speeds.jpeg)
+![Analysis screen - Barber](barber_analysis.jpeg)
+
+![Corner speeds - Grattan](grattan_speeds.jpeg)
