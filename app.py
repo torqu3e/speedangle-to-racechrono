@@ -13,4 +13,4 @@ api = Api(app)
 api.add_resource(SourceFile, "/")
 
 if __name__ == "__main__":
-    app.run(port=environ.get("PORT"))
+    app.run()
