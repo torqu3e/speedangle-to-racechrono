@@ -28,7 +28,11 @@ import sys
 import time
 
 
-def read_speedangle_file(input_file):
+def read_speedangle_file(input_file: str):
+    """
+    Reads input_filename
+    Returns a string timestamp and list of lines to be converted
+    """
     ts_pattern = re.compile("^#D=.*")
     log_pattern = re.compile(
         "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F01]"
@@ -52,6 +56,9 @@ def read_speedangle_file(input_file):
 
 
 def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
+    """
+    Returns list of lines converted to vbo format
+    """
     rc_lines = []
     p_lat = p_lon = 0.0
     base_time = datetime.datetime.strptime(timestamp, "%H:%M:%S")
@@ -84,6 +91,10 @@ def calc_heading(lat: float, lon: float, p_lat: float, p_lon: float) -> float:
 
 
 def write_racechrono_file(lines: list, output_file):
+    """
+    List of lines to be written to filename
+    """
+
     rc_metadata = """[header]
 satellites
 time
