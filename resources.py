@@ -29,16 +29,13 @@ class SourceFile(Resource):
         filename = secure_filename(file.filename)
         file.save(UPLOAD_FOLDER + filename)
 
-        output_filename = (
-            filename.rsplit(".", 1)[0] + "_" + datetime.now().strftime("%s") + ".vbo"
-        )
+        converted_file = self.convert_filetypes(filename)
 
-        timestamp, line_data = read_speedangle_file(UPLOAD_FOLDER + filename)
-        rc_lines = speedangle_to_racechrono_vbo(timestamp, line_data)
-
-        write_racechrono_file(rc_lines, UPLOAD_FOLDER + output_filename)
-
-        return send_file(UPLOAD_FOLDER + output_filename, as_attachment=True)
+        try:
+            return send_file(UPLOAD_FOLDER + converted_file, as_attachment=True)
+        finally:
+            os.remove(UPLOAD_FOLDER + filename)
+            os.remove(UPLOAD_FOLDER + converted_file)
 
     def get(self):
         headers = {"Content-Type": "text/html"}
@@ -57,3 +54,15 @@ class SourceFile(Resource):
         return (
             "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
         )
+
+    def convert_filetypes(self, filename):
+
+        output_filename = (
+            filename.rsplit(".", 1)[0] + "_" + datetime.now().strftime("%s") + ".vbo"
+        )
+
+        timestamp, line_data = read_speedangle_file(UPLOAD_FOLDER + filename)
+        rc_lines = speedangle_to_racechrono_vbo(timestamp, line_data)
+        write_racechrono_file(rc_lines, UPLOAD_FOLDER + output_filename)
+
+        return output_filename
