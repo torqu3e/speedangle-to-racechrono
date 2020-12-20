@@ -5,7 +5,8 @@ from resources import SourceFile
 
 
 app = Flask(__name__)
-# app.config["PROPAGATE_EXCEPTIONS"] = True
+app.config["PROPAGATE_EXCEPTIONS"] = True
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 
 api = Api(app)
