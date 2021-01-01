@@ -26,12 +26,13 @@ from math import cos, sin, atan2, degrees
 import re
 import sys
 import time
+from lap_analysis import analyze
 
 
 def read_speedangle_file(input_file):
     ts_pattern = re.compile("^#D=.*")
     log_pattern = re.compile(
-        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F01]"
+        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F0-9]"
     )
     try:
         with open(input_file, "r") as f:
@@ -47,11 +48,11 @@ def read_speedangle_file(input_file):
     except PermissionError as err:
         print(f"{err}\nSeems you don't have permissions to read the input file")
         sys.exit(1)
-    print(f"Read speedangle source file {input_file}")
+    # print(f"Read speedangle source file {input_file}")
     return log_timestamp, lines
 
 
-def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
+def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list, analyze: bool):
     rc_lines = []
     p_lat = p_lon = 0.0
     base_time = datetime.datetime.strptime(timestamp, "%H:%M:%S")
@@ -66,13 +67,19 @@ def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
         ang = float(v[2])
         accl = int(v[4])
         vel = float(v[6])
+        sector = str(v[-1])
         hed = calc_heading(lat, lon, p_lat, p_lon)
         sat = int(v[8])
-        rc_lines.append(
-            f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
-        )
+        if not analyze:
+            rc_lines.append(
+                f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
+            )
+        else:
+            rc_lines.append(
+                f"{line_time:6.2f} {lat:5.6f} {lon:5.6f} {vel:3.2f} {hed:3.2f} {accl:3.3f} {ang:3.3f} {accl:3.3f} {sector}"
+            )
         p_lat, p_lon = lat, lon
-    print("Format conversion complete")
+    # print("Format conversion complete")
     return rc_lines
 
 
@@ -129,6 +136,9 @@ def main():
         help="REQUIRED! Speedangle log filename to convert to racechrono vbo format",
     )
     parser.add_argument("-o", "--output_file", help="Output filename")
+    parser.add_argument(
+        "-a", "--analyze", action="store_const", const=True, help="Analyze only"
+    )
     args = parser.parse_args()
     input_file = args.input_file
     if not args.output_file:
@@ -138,9 +148,12 @@ def main():
         output_file = args.output_file
 
     timestamp, sa_lines = read_speedangle_file(input_file)
-    write_racechrono_file(
-        speedangle_to_racechrono_vbo(timestamp, sa_lines), output_file
-    )
+    if args.analyze:
+        analyze(speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze))
+    else:
+        write_racechrono_file(
+            speedangle_to_racechrono_vbo(timestamp, sa_lines), output_file
+        )
 
 
 if __name__ == "__main__":
