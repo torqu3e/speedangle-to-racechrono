@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import logging
 
 
 class laps:
@@ -29,15 +30,13 @@ class laps:
             lap_start=start,
             lap_end=end,
             lap_time=self.lap_time,
-            sectors=[
-                datetime.strftime(x, "%H:%M:%S.%f").replace("00000", "")
-                for x in self.sectors
-            ],
+            sectors=[(x - self.start).total_seconds() for x in self.sectors],
         )
         return lap_stats
 
 
 def analyze(raw_data: list):
+    logging.info("Analyzing lap data")
     lap_list = []
     lap_counter = 0
     for item in raw_data:
