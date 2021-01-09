@@ -1,7 +1,7 @@
 """
 Description: Speedangle .sa to Racechrono .vbo format converter
 Author: Tejinder Singh
-Version : v0.0.2
+Version : v0.1.0
 
 Changes:
 * Added heading calculated from coordinate delta
@@ -30,6 +30,8 @@ import time
 from lap_analysis import analyze
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(asctime)s %(message)s")
+
+VERSION = "v0.1.0"
 
 
 def read_speedangle_file(input_file):
@@ -145,11 +147,17 @@ def main():
     parser.add_argument(
         "-a", "--analyze", action="store_const", const=True, help="Analyze only"
     )
-
+    parser.add_argument(
+        "-V", "--version", action="store_const", const=True, help="script version"
+    )
+    # ADD VERSION INFO
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args()
+
+    if args.version:
+        print("speedangle_2_racechrono", VERSION)
 
     if args.in_file:
         timestamp, sa_lines = read_speedangle_file(args.in_file)
@@ -161,7 +169,26 @@ def main():
             output_file = args.out_file
 
         if args.analyze:
-            analyze(speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze))
+            laps = analyze(
+                speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze)
+            )
+            print(f"\nLap\tStart\t\tEnd\t\tLap_Time\tSector_Times")
+            for l in laps:
+                if str(l.lap_time) != "0.0":
+                    stats = l.stats()
+                    print(
+                        stats["lap_number"],
+                        stats["lap_start"],
+                        stats["lap_end"],
+                        stats["lap_time"],
+                        "\t",
+                        sep="\t",
+                        end="",
+                    )
+                    for sector in stats["sectors"]:
+                        print(sector, end="  ")
+                    print("")
+            print()
         else:
             write_racechrono_file(
                 speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze),

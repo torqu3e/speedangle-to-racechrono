@@ -13,9 +13,11 @@ class laps:
 
     @property
     def lap_time(self):
-        lt = (self.end - self.start).total_seconds()
-        if lt > 0:
-            return lt
+        base_time = datetime.strptime("0:0.0", "%M:%S.%f")
+        delta = self.end - self.start
+        lt = (base_time + delta).strftime("%M:%S.%f")
+        if delta.total_seconds() > 0:
+            return lt.replace("00000", "")
         else:
             return 0.0
 
@@ -51,5 +53,4 @@ def analyze(raw_data: list):
                 lap_list[lap_counter - 2].end = start
         elif int(line[-1]) > 0:
             lap.sectors.append(datetime.strptime(line[0], "%H%M%S.%f"))
-    for _ in lap_list:
-        print(json.dumps(_.stats()))
+    return lap_list
