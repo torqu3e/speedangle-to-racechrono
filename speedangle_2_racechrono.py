@@ -1,7 +1,7 @@
 """
 Description: Speedangle .sa to Racechrono .vbo format converter
 Author: Tejinder Singh
-Version : v0.0.2
+Version : v0.1.0
 
 Changes:
 * Added heading calculated from coordinate delta
@@ -22,16 +22,22 @@ VBO file format (not 100% accurate for RaceChrono) - https://racelogic.support/0
 #!/usr/bin/env python3
 import argparse
 import datetime
+import logging
 from math import cos, sin, atan2, degrees
 import re
 import sys
 import time
+from lap_analysis import analyze
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(asctime)s %(message)s")
+
+VERSION = "v0.1.0"
 
 
 def read_speedangle_file(input_file):
     ts_pattern = re.compile("^#D=.*")
     log_pattern = re.compile(
-        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F01]"
+        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F0-9]"
     )
     try:
         with open(input_file, "r") as f:
@@ -42,16 +48,16 @@ def read_speedangle_file(input_file):
                 elif ts_pattern.match(line):
                     log_timestamp = line.strip("\n=").split()[1]
     except FileNotFoundError as err:
-        print(f"{err}\nCheck input filename")
+        logging.error(f"{err}\nCheck input filename")
         sys.exit(1)
     except PermissionError as err:
-        print(f"{err}\nSeems you don't have permissions to read the input file")
+        logging.error(f"{err}\nSeems you don't have permissions to read the input file")
         sys.exit(1)
-    print(f"Read speedangle source file {input_file}")
+    logging.info(f"Read speedangle source file {input_file}")
     return log_timestamp, lines
 
 
-def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
+def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list, analyze: bool):
     rc_lines = []
     p_lat = p_lon = 0.0
     base_time = datetime.datetime.strptime(timestamp, "%H:%M:%S")
@@ -66,13 +72,19 @@ def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
         ang = float(v[2])
         accl = int(v[4])
         vel = float(v[6])
+        sector = str(v[-1])
         hed = calc_heading(lat, lon, p_lat, p_lon)
         sat = int(v[8])
-        rc_lines.append(
-            f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
-        )
+        if not analyze:
+            rc_lines.append(
+                f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
+            )
+        else:
+            rc_lines.append(
+                f"{line_time:6.2f} {lat:5.6f} {lon:5.6f} {vel:3.2f} {hed:3.2f} {accl:3.3f} {ang:3.3f} {accl:3.3f} {sector}"
+            )
         p_lat, p_lon = lat, lon
-    print("Format conversion complete")
+    logging.info("Format conversion complete")
     return rc_lines
 
 
@@ -111,12 +123,14 @@ sats time lat long velocity heading height longacc latacc distance device-update
             f.write(rc_metadata)
             for line in lines:
                 f.write(f"{line}\n")
-        print(f"Wrote racechrono .vbo file {output_file}")
+        logging.info(f"Wrote racechrono .vbo file {output_file}")
     except PermissionError as err:
-        print(f"{err}\nSeems you don't have permissions to write to the output file")
+        logging.error(
+            f"{err}\nSeems you don't have permissions to write to the output file"
+        )
         sys.exit(1)
     except FileExistsError as err:
-        print(
+        logging.error(
             f"{err}\nOutput file already exists, won't overwrite. Use different filename or don't provide one to autogenerate"
         )
         sys.exit(1)
@@ -125,22 +139,61 @@ sats time lat long velocity heading height longacc latacc distance device-update
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input_file",
-        help="REQUIRED! Speedangle log filename to convert to racechrono vbo format",
+        "-i",
+        "--in_file",
+        help="Required - .sa input filename",
     )
-    parser.add_argument("-o", "--output_file", help="Output filename")
+    parser.add_argument("-o", "--out_file", help=".vbo output filename")
+    parser.add_argument(
+        "-a", "--analyze", action="store_const", const=True, help="Analyze only"
+    )
+    parser.add_argument(
+        "-V", "--version", action="store_const", const=True, help="script version"
+    )
+    # ADD VERSION INFO
+    if len(sys.argv) < 2:
+        parser.print_help()
+        sys.exit(0)
     args = parser.parse_args()
-    input_file = args.input_file
-    if not args.output_file:
-        file_ts = str(time.time()).split(".")[0]
-        output_file = f"{input_file}_{file_ts}.vbo"
-    else:
-        output_file = args.output_file
 
-    timestamp, sa_lines = read_speedangle_file(input_file)
-    write_racechrono_file(
-        speedangle_to_racechrono_vbo(timestamp, sa_lines), output_file
-    )
+    if args.version:
+        print("speedangle_2_racechrono", VERSION)
+
+    if args.in_file:
+        timestamp, sa_lines = read_speedangle_file(args.in_file)
+
+        if not args.out_file:
+            file_ts = str(time.time()).split(".")[0]
+            output_file = f"{args.in_file}_{file_ts}.vbo"
+        else:
+            output_file = args.out_file
+
+        if args.analyze:
+            laps = analyze(
+                speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze)
+            )
+            print(f"\nLap\tStart\t\tEnd\t\tLap_Time\tSector_Times")
+            for l in laps:
+                if str(l.lap_time) != "0.0":
+                    stats = l.stats()
+                    print(
+                        stats["lap_number"],
+                        stats["lap_start"],
+                        stats["lap_end"],
+                        stats["lap_time"],
+                        "\t",
+                        sep="\t",
+                        end="",
+                    )
+                    for sector in stats["sectors"]:
+                        print(sector, end="  ")
+                    print("")
+            print()
+        else:
+            write_racechrono_file(
+                speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze),
+                output_file,
+            )
 
 
 if __name__ == "__main__":
