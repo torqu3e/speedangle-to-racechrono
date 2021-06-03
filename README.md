@@ -9,6 +9,10 @@ If you run into any issues using this script please report the problem so I can 
 
 ## Usage
 
+There is a very rudimentary looking (functions the same) version to convert files online at https://sa2rc.herokuapp.com/
+
+or you can do it locally on your machine...
+
 ```
 python3 speedangle_2_racechrono.py ~/Downloads/BARBER\ 110820\ 140040.sa -o barber.vbo
 ```
