@@ -44,7 +44,7 @@ INFO:2021-06-04 04:38:02,233 Read speedangle source file test_data/PHILLIP ISLAN
 INFO:2021-06-04 04:38:02,704 Format conversion complete
 INFO:2021-06-04 04:38:02,704 Analyzing lap data
 
-Lap	Start   		End   		  Lap_Time	Sector_Times
+Lap	  Start         End   		Lap_Time	Sector_Times
 1	  15:49:01.0	15:51:54.0	02:53.0		33.1  63.6  146.0  
 2	  15:51:54.0	15:53:43.2	01:49.2		29.8  58.0  85.5  
 3	  15:53:43.2	15:55:32.3	01:49.1		29.8  57.8  85.1  
