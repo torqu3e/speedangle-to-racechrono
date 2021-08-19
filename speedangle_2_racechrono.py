@@ -1,15 +1,9 @@
 """
 Description: Speedangle .sa to Racechrono .vbo format converter
 Author: Tejinder Singh
-Version : v0.1.0
-
-Changes:
-* Added heading calculated from coordinate delta
-* Fixed longitude inversion
-* Lean angle data requires additional channel for vbo import to RC. TB fixed by @aol
+Version : v0.1.1
 
 TBD:
-* Figure heading calculation borked for some tracks
 * Get Racechrono to .sa file import in the app
 
 Reference:
@@ -57,7 +51,13 @@ def read_speedangle_file(input_file):
     return log_timestamp, lines
 
 
-def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list, analyze: bool):
+def speedangle_to_racechrono_vbo(
+    timestamp: str, sa_lines: list, analyze: bool, vel_unit: str
+):
+    if vel_unit == "k":
+        vel_factor = 1.60934  # mph to kph
+    else:
+        vel_factor = 1.0
     rc_lines = []
     p_lat = p_lon = 0.0
     base_time = datetime.datetime.strptime(timestamp, "%H:%M:%S")
@@ -71,17 +71,17 @@ def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list, analyze: bool):
         lon = float(v[1])
         ang = float(v[2])
         accl = int(v[4])
-        vel = float(v[6])
+        vel = float(v[6]) * vel_factor
         sector = str(v[-1])
         hed = calc_heading(lat, lon, p_lat, p_lon)
         sat = int(v[8])
         if not analyze:
             rc_lines.append(
-                f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
+                f"{sat:03} {line_time:09.2f} {lat*60:.6f} {-lon*60:.6f} {vel:.2f} {hed:.2f} 00000.00 {accl:.3f} 000.000 0000000.000 +010.000 {ang:.3f} {accl:.3f} 3 02.46"
             )
         else:
             rc_lines.append(
-                f"{line_time:6.2f} {lat:5.6f} {lon:5.6f} {vel:3.2f} {hed:3.2f} {accl:3.3f} {ang:3.3f} {accl:3.3f} {sector}"
+                f"{line_time:09.2f} {lat:.6f} {lon:.6f} {vel:.2f} {hed:.2f} {accl:.3f} {ang:.3f} {accl:.3f} {sector}"
             )
         p_lat, p_lon = lat, lon
     logging.info("Format conversion complete")
@@ -92,7 +92,7 @@ def calc_heading(lat: float, lon: float, p_lat: float, p_lon: float) -> float:
     delta = lon - p_lon
     x = cos(lat) * sin(delta)
     y = cos(p_lat) * sin(lat) - sin(p_lat) * cos(lat) * cos(delta)
-    return degrees(atan2(x, y))
+    return degrees(atan2(x, y) * -1)
 
 
 def write_racechrono_file(lines: list, output_file):
@@ -145,12 +145,18 @@ def main():
     )
     parser.add_argument("-o", "--out_file", help=".vbo output filename")
     parser.add_argument(
+        "-m",
+        "--mph",
+        action="store_const",
+        const=True,
+        help="output velocity in mph",
+    )
+    parser.add_argument(
         "-a", "--analyze", action="store_const", const=True, help="Analyze only"
     )
     parser.add_argument(
         "-V", "--version", action="store_const", const=True, help="script version"
     )
-    # ADD VERSION INFO
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(0)
@@ -167,10 +173,16 @@ def main():
             output_file = f"{args.in_file}_{file_ts}.vbo"
         else:
             output_file = args.out_file
+    if args.mph:
+        vel_unit = "m"
+    else:
+        vel_unit = "k"
 
         if args.analyze:
             laps = analyze(
-                speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze)
+                speedangle_to_racechrono_vbo(
+                    timestamp, sa_lines, args.analyze, vel_unit
+                )
             )
             print(f"\nLap\tStart\t\tEnd\t\tLap_Time\tSector_Times")
             for l in laps:
@@ -191,7 +203,9 @@ def main():
             print()
         else:
             write_racechrono_file(
-                speedangle_to_racechrono_vbo(timestamp, sa_lines, args.analyze),
+                speedangle_to_racechrono_vbo(
+                    timestamp, sa_lines, args.analyze, vel_unit
+                ),
                 output_file,
             )
 

@@ -41,6 +41,7 @@ def analyze(raw_data: list):
     logging.info("Analyzing lap data")
     lap_list = []
     lap_counter = 0
+    lap = None
     for item in raw_data:
         line = item.split()
         if line[-1] == "F":
@@ -51,6 +52,6 @@ def analyze(raw_data: list):
             lap_list.append(lap)
             if lap_counter > 1:
                 lap_list[lap_counter - 2].end = start
-        elif int(line[-1]) > 0:
+        elif int(line[-1]) > 0 and lap:
             lap.sectors.append(datetime.strptime(line[0], "%H%M%S.%f"))
     return lap_list
