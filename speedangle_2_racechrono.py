@@ -1,7 +1,7 @@
 """
 Description: Speedangle .sa to Racechrono .vbo format converter
 Author: Tejinder Singh
-Version : v0.1.1
+Version : v0.1.2
 
 TBD:
 * Get Racechrono to .sa file import in the app
@@ -17,7 +17,7 @@ VBO file format (not 100% accurate for RaceChrono) - https://racelogic.support/0
 import argparse
 import datetime
 import logging
-from math import cos, sin, atan2, degrees
+from math import cos, sin, atan2, degrees, radians
 import re
 import sys
 import time
@@ -89,10 +89,12 @@ def speedangle_to_racechrono_vbo(
 
 
 def calc_heading(lat: float, lon: float, p_lat: float, p_lon: float) -> float:
+    lat, lon, p_lat, p_lon = radians(lat), radians(lon), radians(p_lat), radians(p_lon)
     delta = lon - p_lon
     x = cos(lat) * sin(delta)
     y = cos(p_lat) * sin(lat) - sin(p_lat) * cos(lat) * cos(delta)
-    return degrees(atan2(x, y) * -1)
+    bearing = degrees(atan2(x, y))
+    return (bearing + 360) % 360
 
 
 def write_racechrono_file(lines: list, output_file):
@@ -212,3 +214,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
