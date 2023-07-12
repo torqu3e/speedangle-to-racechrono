@@ -1,15 +1,9 @@
 """
 Description: Speedangle .sa to Racechrono .vbo format converter
 Author: Tejinder Singh
-Version : v0.0.2
-
-Changes:
-* Added heading calculated from coordinate delta
-* Fixed longitude inversion
-* Lean angle data requires additional channel for vbo import to RC. TB fixed by @aol
+Version : v0.0.3
 
 TBD:
-* Figure heading calculation borked for some tracks
 * Get Racechrono to .sa file import in the app
 
 Reference:
@@ -22,7 +16,7 @@ VBO file format (not 100% accurate for RaceChrono) - https://racelogic.support/0
 #!/usr/bin/env python3
 import argparse
 import datetime
-from math import cos, sin, atan2, degrees
+from math import cos, sin, atan2, degrees, radians
 import re
 import sys
 import time
@@ -35,7 +29,7 @@ def read_speedangle_file(input_file: str):
     """
     ts_pattern = re.compile("^#D=.*")
     log_pattern = re.compile(
-        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F01]"
+        "-?[0-9]{1,3}.[0-9]{6},-?[0-9]{1,3}.[0-9]{6},(-?[0-9]{1,3},){8}[F0-9]"
     )
     try:
         with open(input_file, "r") as f:
@@ -76,7 +70,7 @@ def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
         hed = calc_heading(lat, lon, p_lat, p_lon)
         sat = int(v[8])
         rc_lines.append(
-            f"{sat:03} {line_time:6.2f} {lat*60:5.6f} {-lon*60:5.6f} {vel:3.2f} {hed:3.2f} 00000.00 {accl:3.3f} 000.000 0000000.000 +010.000 {ang:3.3f} {accl:3.3f} 3 02.46"
+            f"{sat:03} {line_time:09.2f} {lat*60:.6f} {-lon*60:.6f} {vel:.2f} {hed:.2f} 00000.00 {accl:.3f} 000.000 0000000.000 +010.000 {ang:.3f} {accl:.3f} 3 02.46"
         )
         p_lat, p_lon = lat, lon
     print("Format conversion complete")
@@ -84,10 +78,12 @@ def speedangle_to_racechrono_vbo(timestamp: str, sa_lines: list):
 
 
 def calc_heading(lat: float, lon: float, p_lat: float, p_lon: float) -> float:
+    lat, lon, p_lat, p_lon = radians(lat), radians(lon), radians(p_lat), radians(p_lon)
     delta = lon - p_lon
     x = cos(lat) * sin(delta)
     y = cos(p_lat) * sin(lat) - sin(p_lat) * cos(lat) * cos(delta)
-    return degrees(atan2(x, y))
+    bearing = degrees(atan2(x, y))
+    return (bearing + 360) % 360
 
 
 def write_racechrono_file(lines: list, output_file):
