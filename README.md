@@ -9,7 +9,7 @@ If you run into any issues using this script please report the problem so I can 
 
 ## Usage
 
-You can convert files online at https://sa2rc.herokuapp.com/ if you don't want to run it locally. It is rudimentary looking but does the conversion the same.
+You can convert files online at https://sa2rc.onrender.com if you don't want to run it locally. It is rudimentary looking but does the conversion the same.
 
 To run it locally...
 
